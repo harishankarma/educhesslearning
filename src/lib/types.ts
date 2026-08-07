@@ -170,12 +170,61 @@ export interface Tournament {
   tournament_date: string;
   end_date: string;
   location: string;
-  status: "upcoming" | "registration" | "ongoing" | "completed";
+  status: "upcoming" | "registration" | "ongoing" | "completed" | "cancelled";
   max_participants: number;
   format: "swiss" | "round-robin" | "knockout";
   rounds: number;
   created_by: string;
   created_at: string;
+  join_link: string;
+  platform: string;
+  start_datetime: string | null;
+  end_datetime: string | null;
+  timezone: string;
+  tournament_type: string;
+  notes: string;
+  registration_deadline: string | null;
+}
+
+export type ArticleCategory =
+  | "Openings" | "Endgames" | "Tactics" | "Strategy"
+  | "Tournament Tips" | "Academy News"
+  | "Beginner" | "Intermediate" | "Advanced";
+
+export interface Article {
+  id: string;
+  title: string;
+  summary: string;
+  blog_url: string;
+  cover_image_url: string;
+  category: string;
+  is_featured: boolean;
+  status: "draft" | "published";
+  published_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArticleBookmark {
+  id: string;
+  article_id: string;
+  student_id: string;
+  created_at: string;
+}
+
+export interface ArticleLike {
+  id: string;
+  article_id: string;
+  student_id: string;
+  created_at: string;
+}
+
+export interface ArticleProgress {
+  id: string;
+  article_id: string;
+  student_id: string;
+  read_at: string;
 }
 
 export interface TournamentParticipant {
