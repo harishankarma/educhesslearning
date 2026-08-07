@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
-import type { Profile, Course, Lesson, LessonProgress, Chat } from "@/lib/types";
+import type { Profile, Course, Lesson, LessonProgress, Chat, Badge, StudentBadge, Certificate } from "@/lib/types";
 import Layout, { type Tab } from "@/components/Layout";
 import ChatWindow from "@/components/ChatWindow";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -13,7 +13,7 @@ import { formatShortTime } from "@/lib/utils";
 import {
   BookOpen, Loader2, ChevronRight, ArrowLeft, CheckCircle2, Circle,
   MessageSquare, Grid3x3, FileText, Paperclip, Puzzle, Youtube,
-  Award, Calendar, Trophy, Video,
+  Award, Calendar, Trophy, Video, Download,
 } from "lucide-react";
 
 export default function StudentDashboard() {
@@ -222,27 +222,63 @@ function StudentTournaments({ profile: _profile }: { profile: Profile }) {
   );
 }
 function StudentCertificates({ profile }: { profile: Profile }) {
-  const [certs, setCerts] = useState<any[]>([]);
+  const [certs, setCerts] = useState<Certificate[]>([]);
+  const [badges, setBadges] = useState<(StudentBadge & { badge: Badge })[]>([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    supabase.from("certificates").select("*").eq("student_id", profile.id).order("created_at", { ascending: false }).then(({ data }) => {
-      setCerts(data ?? []); setLoading(false);
+    Promise.all([
+      supabase.from("certificates").select("*").eq("student_id", profile.id).order("created_at", { ascending: false }),
+      supabase.from("student_badges").select("*, badge:badges!student_badges_badge_id_fkey(*)").eq("student_id", profile.id).order("awarded_at", { ascending: false }),
+    ]).then(([c, b]) => {
+      setCerts((c.data as Certificate[]) ?? []);
+      setBadges((b.data as unknown as (StudentBadge & { badge: Badge })[]) ?? []);
+      setLoading(false);
     });
   }, [profile.id]);
+
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-surface-900 mb-6">My Certificates</h1>
+      <h1 className="text-2xl font-bold text-surface-900 mb-6">My Achievements</h1>
+
+      {/* Badges */}
+      <h2 className="text-lg font-bold text-surface-900 mb-3">Badges</h2>
+      {badges.length === 0 ? (
+        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-surface-400 mb-8"><Award className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>No badges awarded yet.</p></div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+          {badges.map((sb) => (
+            <div key={sb.id} className="bg-white rounded-xl border border-surface-200 p-3 text-center">
+              <img src={sb.badge?.image_url} alt={sb.badge?.name} className="w-16 h-16 mx-auto object-contain mb-2" />
+              <p className="text-xs font-medium text-surface-900 line-clamp-2">{sb.badge?.name}</p>
+              <p className="text-xs text-surface-400 mt-1">{new Date(sb.awarded_at).toLocaleDateString()}</p>
+              {sb.note && <p className="text-xs text-surface-400 mt-1 line-clamp-2 italic">{sb.note}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Certificates */}
+      <h2 className="text-lg font-bold text-surface-900 mb-3">Certificates</h2>
       {certs.length === 0 ? (
         <div className="bg-white rounded-xl border border-surface-200 p-12 text-center text-surface-400"><Award className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>No certificates earned yet.</p></div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {certs.map((c: any) => (
+          {certs.map((c) => (
             <div key={c.id} className="bg-white rounded-xl border border-surface-200 p-5">
               <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-accent-50 text-accent-700 mb-3"><Award className="w-6 h-6" /></div>
               <h3 className="font-semibold text-surface-900">{c.title}</h3>
-              <p className="text-xs text-surface-500 mt-1">Issued: {c.issue_date}</p>
+              <p className="text-xs text-surface-500 mt-1">Issued: {new Date(c.issue_date).toLocaleDateString()}</p>
               <p className="text-xs text-surface-400 mt-1 font-mono">Code: {c.verification_code}</p>
+              {c.file_url ? (
+                <a href={c.file_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary-600 px-3 py-1.5 rounded-lg bg-primary-50 hover:bg-primary-100">
+                  <Download className="w-4 h-4" /> Download
+                </a>
+              ) : (
+                <p className="text-xs text-surface-400 mt-3 italic">No downloadable file</p>
+              )}
             </div>
           ))}
         </div>
