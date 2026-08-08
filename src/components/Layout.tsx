@@ -5,14 +5,14 @@ import type { Role, Notification } from "@/lib/types";
 import {
   LogOut, LayoutDashboard, BookOpen, MessageSquare, Users, Calendar,
   Trophy, CreditCard, Bell, Library, FileText, GraduationCap, ClipboardList,
-  Megaphone, Search, Award, BarChart3, ScrollText, Video,
+  Megaphone, Search, Award, BarChart3, ScrollText, Video, Newspaper,
 } from "lucide-react";
 
 export type Tab =
   | "dashboard" | "courses" | "messages" | "manage" | "calendar"
   | "tournaments" | "finance" | "notifications" | "library"
   | "reports" | "certificates" | "assignments" | "announcements"
-  | "attendance" | "students" | "games" | "audit" | "search";
+  | "attendance" | "students" | "games" | "audit" | "search" | "learning";
 
 interface LayoutProps {
   children: ReactNode;
@@ -36,7 +36,7 @@ const ownerTabs: { key: Tab; label: string; icon: typeof BookOpen }[] = [
   { key: "tournaments", label: "Tournaments", icon: Trophy },
   { key: "finance", label: "Finance", icon: CreditCard },
   { key: "announcements", label: "Announcements", icon: Megaphone },
-  { key: "library", label: "Library", icon: Library },
+  { key: "library", label: "Learning Hub", icon: Library },
   { key: "reports", label: "Reports", icon: BarChart3 },
   { key: "certificates", label: "Certificates", icon: Award },
   { key: "audit", label: "Audit Log", icon: ScrollText },
@@ -62,6 +62,7 @@ const studentTabs: { key: Tab; label: string; icon: typeof BookOpen }[] = [
   { key: "games", label: "Game Analysis", icon: Video },
   { key: "calendar", label: "Calendar", icon: Calendar },
   { key: "tournaments", label: "Tournaments", icon: Trophy },
+  { key: "learning", label: "Learning Hub", icon: Newspaper },
   { key: "certificates", label: "Certificates", icon: Award },
   { key: "messages", label: "Messages", icon: MessageSquare },
 ];

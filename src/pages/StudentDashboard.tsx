@@ -9,6 +9,9 @@ import ChessBoard from "@/components/ChessBoard";
 import LessonFiles from "@/components/LessonFiles";
 import PuzzleSolver from "@/components/PuzzleSolver";
 import InteractiveLessonPlayer from "@/components/InteractiveLessonPlayer";
+import StudentTournamentCalendar from "@/components/StudentTournamentCalendar";
+import StudentLearningHub from "@/components/StudentLearningHub";
+import StudentCalendar from "@/components/StudentCalendar";
 import { formatShortTime } from "@/lib/utils";
 import {
   BookOpen, Loader2, ChevronRight, ArrowLeft, CheckCircle2, Circle,
@@ -28,8 +31,9 @@ export default function StudentDashboard() {
       {tab === "messages" && <StudentMessages profile={profile} />}
       {tab === "assignments" && <StudentAssignments profile={profile} />}
       {tab === "games" && <StudentGames profile={profile} />}
-      {tab === "calendar" && <StudentCalendar />}
-      {tab === "tournaments" && <StudentTournaments profile={profile} />}
+      {tab === "calendar" && <StudentCalendar profile={profile} />}
+      {tab === "tournaments" && <StudentTournamentCalendar profile={profile} />}
+      {tab === "learning" && <StudentLearningHub profile={profile} />}
       {tab === "certificates" && <StudentCertificates profile={profile} />}
     </Layout>
   );
@@ -189,38 +193,7 @@ function StudentGames({ profile }: { profile: Profile }) {
   );
 }
 
-function StudentCalendar() {
-  return <div className="p-8 text-center text-surface-400"><Calendar className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>Calendar — view upcoming classes, tournaments, and events.</p></div>;
-}
-function StudentTournaments({ profile: _profile }: { profile: Profile }) {
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    supabase.from("tournaments").select("*").order("tournament_date", { ascending: false }).then(({ data }) => {
-      setTournaments(data ?? []); setLoading(false);
-    });
-  }, []);
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-surface-900 mb-6">Tournaments</h1>
-      {tournaments.length === 0 ? (
-        <div className="bg-white rounded-xl border border-surface-200 p-12 text-center text-surface-400"><Trophy className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>No tournaments yet.</p></div>
-      ) : (
-        <div className="space-y-3">
-          {tournaments.map((t: any) => (
-            <div key={t.id} className="bg-white rounded-xl border border-surface-200 p-4">
-              <div className="flex items-start justify-between">
-                <div><h3 className="font-semibold text-surface-900">{t.title}</h3><p className="text-xs text-surface-500 mt-1">{t.tournament_date} • {t.location ?? "TBD"}</p></div>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${t.status === "completed" ? "bg-surface-100 text-surface-600" : t.status === "ongoing" ? "bg-success-50 text-success-700" : "bg-primary-50 text-primary-700"}`}>{t.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+
 function StudentCertificates({ profile }: { profile: Profile }) {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [badges, setBadges] = useState<(StudentBadge & { badge: Badge })[]>([]);

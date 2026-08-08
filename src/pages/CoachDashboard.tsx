@@ -10,11 +10,8 @@ import ChessBoard from "@/components/ChessBoard";
 import LessonFiles from "@/components/LessonFiles";
 import PuzzleEditor from "@/components/PuzzleEditor";
 import InteractiveLessonEditor from "@/components/InteractiveLessonEditor";
-import {
-  BookOpen, Plus, Loader2, X, Trash2, Edit3, ChevronRight, ArrowLeft,
-  GripVertical, MessageSquare, Save, AlertCircle, Grid3x3, Paperclip,
-  Puzzle, Youtube, Users, ClipboardList, Calendar, Trophy, FileText, Video,
-} from "lucide-react";
+import CoachCalendar from "@/components/CoachCalendar";
+import { BookOpen, Plus, Loader2, X, Trash2, CreditCard as Edit3, ChevronRight, ArrowLeft, GripVertical, MessageSquare, Save, AlertCircle, Grid3x3, Paperclip, Puzzle, Youtube, Users, ClipboardList, Calendar, Trophy, FileText, Video } from "lucide-react";
 
 export default function CoachDashboard() {
   const { profile } = useAuth();
@@ -28,7 +25,7 @@ export default function CoachDashboard() {
       {tab === "messages" && <CoachMessages profile={profile} />}
       {tab === "attendance" && <CoachAttendance profile={profile} />}
       {tab === "assignments" && <CoachAssignments profile={profile} />}
-      {tab === "calendar" && <CoachCalendar />}
+      {tab === "calendar" && <CoachCalendar profile={profile} />}
       {tab === "tournaments" && <CoachTournaments profile={profile} />}
       {tab === "students" && <CoachStudents profile={profile} />}
       {tab === "games" && <CoachGames profile={profile} />}
@@ -325,9 +322,7 @@ function CreateAssignmentModal({ courses, coachId, onClose, onSaved }: { courses
   );
 }
 
-function CoachCalendar() {
-  return <div className="p-8 text-center text-surface-400"><Calendar className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>Calendar view — view your upcoming classes and events.</p></div>;
-}
+// CoachCalendar is now imported from @/components/CoachCalendar
 function CoachTournaments({ profile: _profile }: { profile: Profile }) {
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

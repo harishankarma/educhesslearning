@@ -146,10 +146,43 @@ export interface ClassSession {
   title: string;
   scheduled_date: string;
   start_time: string;
+  end_time: string | null;
   duration_minutes: number;
   meeting_url: string;
-  status: "scheduled" | "completed" | "cancelled";
+  platform: string;
+  status: "scheduled" | "completed" | "cancelled" | "rescheduled";
   notes: string;
+  topics_covered: string;
+  homework: string;
+  skill_focus: string;
+  resources_used: string;
+  class_remarks: string;
+  recurring_id: string | null;
+  original_date: string | null;
+  created_at: string;
+}
+
+export interface ClassStudent {
+  id: string;
+  class_id: string;
+  student_id: string;
+  assigned_at: string;
+}
+
+export interface RecurringClass {
+  id: string;
+  course_id: string;
+  coach_id: string;
+  title: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string | null;
+  platform: string;
+  meeting_url: string;
+  start_date: string;
+  end_date: string | null;
+  num_weeks: number;
+  created_by: string;
   created_at: string;
 }
 

@@ -7,6 +7,9 @@ import type {
   Resource, Assignment,
 } from "@/lib/types";
 import Layout, { type Tab } from "@/components/Layout";
+import TournamentManager from "@/components/TournamentManager";
+import ArticleManager from "@/components/ArticleManager";
+import AdminClassCalendar from "@/components/AdminClassCalendar";
 import {
   Modal, Field, Button, StatCard, Spinner, EmptyState, Badge, ProgressBar,
 } from "@/components/ui";
@@ -29,11 +32,11 @@ export default function OwnerDashboard() {
       {tab === "manage" && <ManageTab onChanged={() => {}} />}
       {tab === "courses" && <CoursesTab />}
       {tab === "attendance" && <AttendanceOverviewTab />}
-      {tab === "calendar" && <CalendarTab />}
-      {tab === "tournaments" && <TournamentsTab profile={profile} />}
+      {tab === "calendar" && <AdminClassCalendar />}
+      {tab === "tournaments" && <TournamentManager profile={profile} />}
       {tab === "finance" && <FinanceTab />}
       {tab === "announcements" && <AnnouncementsTab profile={profile} />}
-      {tab === "library" && <LibraryTab profile={profile} />}
+      {tab === "library" && <ArticleManager profile={profile} />}
       {tab === "reports" && <ReportsTab />}
       {tab === "certificates" && <CertificatesTab />}
       {tab === "audit" && <AuditTab />}
@@ -708,190 +711,6 @@ function AttendanceModal({ classSession, profileId, onClose, onDone }: { classSe
 }
 
 // ============================================================
-// CALENDAR TAB
-// ============================================================
-function CalendarTab() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showAdd, setShowAdd] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-
-  const load = useCallback(async () => {
-    const { data } = await supabase.from("calendar_events").select("*").order("event_date");
-    setEvents((data as CalendarEvent[]) ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-  const eventColors: Record<string, string> = { class: "bg-primary-500", tournament: "bg-error-500", holiday: "bg-success-500", exam: "bg-warning-500", workshop: "bg-accent-500" };
-
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-surface-900">Calendar</h1>
-        <Button onClick={() => setShowAdd(true)}><Plus className="w-5 h-5" /> Add Event</Button>
-      </div>
-      <div className="bg-white rounded-xl border border-surface-200 p-4 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="p-2 rounded-lg hover:bg-surface-100">←</button>
-          <h2 className="text-lg font-bold text-surface-900">{currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</h2>
-          <button onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="p-2 rounded-lg hover:bg-surface-100">→</button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-surface-500 mb-2">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="py-1">{d}</div>)}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((day, i) => {
-            if (day === null) return <div key={i} />;
-            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const dayEvents = events.filter((e) => e.event_date === dateStr);
-            return (
-              <div key={i} className={`min-h-16 rounded-lg border border-surface-100 p-1 ${dayEvents.length > 0 ? "bg-surface-50" : ""}`}>
-                <p className="text-xs text-surface-600 font-medium">{day}</p>
-                {dayEvents.map((e) => (
-                  <button key={e.id} onClick={() => setSelectedEvent(e)} className={`w-full text-left text-xs text-white rounded px-1 py-0.5 mb-0.5 truncate ${eventColors[e.event_type] ?? "bg-surface-400"}`}>
-                    {e.title}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {showAdd && <AddEventModal onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); load(); }} />}
-      {selectedEvent && (
-        <Modal title={selectedEvent.title} onClose={() => setSelectedEvent(null)}>
-          <div className="space-y-2">
-            <p className="text-sm text-surface-500"><CalIcon className="w-4 h-4 inline mr-1" />{new Date(selectedEvent.event_date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-            <Badge color="primary">{selectedEvent.event_type}</Badge>
-            {selectedEvent.description && <p className="text-sm text-surface-700">{selectedEvent.description}</p>}
-          </div>
-        </Modal>
-      )}
-      {loading && <div className="flex justify-center py-4"><Spinner /></div>}
-    </div>
-  );
-}
-
-function AddEventModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ title: "", description: "", event_date: "", event_type: "workshop" as CalendarEvent["event_type"] });
-  const [busy, setBusy] = useState(false);
-  async function save() {
-    if (!form.title.trim() || !form.event_date) return;
-    setBusy(true);
-    await supabase.from("calendar_events").insert({ ...form, end_date: form.event_date, related_id: "" });
-    setBusy(false);
-    onSaved();
-  }
-  return (
-    <Modal title="Add Calendar Event" onClose={onClose}>
-      <div className="space-y-4">
-        <Field label="Title"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none" /></Field>
-        <Field label="Description"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none resize-none" /></Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Date"><input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none" /></Field>
-          <Field label="Type"><select value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value as CalendarEvent["event_type"] })} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none"><option value="class">Class</option><option value="tournament">Tournament</option><option value="holiday">Holiday</option><option value="exam">Exam</option><option value="workshop">Workshop</option></select></Field>
-        </div>
-        <Button onClick={save} disabled={busy || !form.title.trim() || !form.event_date} className="w-full">{busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />} Add Event</Button>
-      </div>
-    </Modal>
-  );
-}
-
-// ============================================================
-// TOURNAMENTS TAB
-// ============================================================
-function TournamentsTab({ profile }: { profile: Profile }) {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [selected, setSelected] = useState<Tournament | null>(null);
-  const [participants, setParticipants] = useState<Profile[]>([]);
-
-  const load = useCallback(async () => {
-    const { data } = await supabase.from("tournaments").select("*").order("tournament_date", { ascending: false });
-    setTournaments((data as Tournament[]) ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  useEffect(() => {
-    if (!selected) return;
-    supabase.from("tournament_participants").select("student:profiles!tournament_participants_student_id_fkey(*)").eq("tournament_id", selected.id).then(({ data }) => {
-      setParticipants(((data as unknown as { student: Profile }[]) ?? []).map((d) => d.student).filter(Boolean));
-    });
-  }, [selected]);
-
-  const upcoming = tournaments.filter((t) => t.status === "upcoming" || t.status === "registration");
-  const ongoing = tournaments.filter((t) => t.status === "ongoing");
-  const completed = tournaments.filter((t) => t.status === "completed");
-
-  if (loading) return <div className="flex justify-center py-20"><Spinner className="w-8 h-8" /></div>;
-
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-surface-900">Tournaments</h1>
-        <Button onClick={() => setShowCreate(true)}><Plus className="w-5 h-5" /> Create Tournament</Button>
-      </div>
-      {tournaments.length === 0 ? (
-        <EmptyState icon={Trophy} message="No tournaments yet." />
-      ) : (
-        <div className="space-y-6">
-          {[["Upcoming", upcoming], ["Ongoing", ongoing], ["Completed", completed]].map(([label, list]) => (list as Tournament[]).length > 0 && (
-            <div key={label as string}>
-              <h2 className="text-lg font-bold text-surface-900 mb-3">{label as string}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(list as Tournament[]).map((t) => (
-                  <button key={t.id} onClick={() => setSelected(t)} className="bg-white rounded-xl border border-surface-200 p-4 text-left hover:shadow-md transition">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-surface-900">{t.title}</h3>
-                      <Badge color={t.status === "completed" ? "surface" : t.status === "ongoing" ? "warning" : "primary"}>{t.status}</Badge>
-                    </div>
-                    <p className="text-xs text-surface-500 mb-2">{new Date(t.tournament_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
-                    {t.location && <p className="text-xs text-surface-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> {t.location}</p>}
-                    <p className="text-xs text-surface-400 mt-1">{t.format} • {t.rounds} rounds • Max {t.max_participants}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {showCreate && <QuickTournamentModal profileId={profile.id} onClose={() => setShowCreate(false)} onSaved={() => { setShowCreate(false); load(); }} />}
-      {selected && (
-        <Modal title={selected.title} onClose={() => setSelected(null)} maxWidth="max-w-lg">
-          <div className="space-y-3">
-            <p className="text-sm text-surface-600">{selected.description || "No description"}</p>
-            <div className="flex flex-wrap gap-2 text-xs text-surface-500">
-              <Badge color="primary">{selected.format}</Badge>
-              <Badge color="surface">{selected.rounds} rounds</Badge>
-              <Badge color="surface">Max {selected.max_participants}</Badge>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-surface-900 mb-2">Participants ({participants.length})</h4>
-              {participants.length === 0 ? <p className="text-sm text-surface-400">No participants registered yet.</p> : (
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {participants.map((p) => <div key={p.id} className="text-sm text-surface-700 py-1">{p.name}</div>)}
-                </div>
-              )}
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
 // FINANCE TAB
 // ============================================================
 function FinanceTab() {
@@ -1060,97 +879,6 @@ function CreateAnnouncementModal({ profileId, onClose, onSaved }: { profileId: s
         <Field label="Target Audience"><select value={form.target_type} onChange={(e) => setForm({ ...form, target_type: e.target.value as Announcement["target_type"] })} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none"><option value="all">All</option><option value="course">Course</option><option value="coach">Coaches</option><option value="student">Students</option></select></Field>
         <label className="flex items-center gap-2 text-sm text-surface-700"><input type="checkbox" checked={form.is_pinned} onChange={(e) => setForm({ ...form, is_pinned: e.target.checked })} className="rounded" /> Pin this announcement</label>
         <Button onClick={save} disabled={busy || !form.title.trim() || !form.message.trim()} className="w-full">{busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Megaphone className="w-5 h-5" />} Publish</Button>
-      </div>
-    </Modal>
-  );
-}
-
-// ============================================================
-// LIBRARY TAB
-// ============================================================
-function LibraryTab({ profile }: { profile: Profile }) {
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showUpload, setShowUpload] = useState(false);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-
-  const load = useCallback(async () => {
-    const { data } = await supabase.from("resources").select("*").order("created_at", { ascending: false });
-    setResources((data as Resource[]) ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const categories = ["all", ...new Set(resources.map((r) => r.category).filter(Boolean))];
-  const filtered = resources.filter((r) => (category === "all" || r.category === category) && (!search || r.title.toLowerCase().includes(search.toLowerCase())));
-
-  if (loading) return <div className="flex justify-center py-20"><Spinner className="w-8 h-8" /></div>;
-
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-surface-900">Resource Library</h1>
-        <Button onClick={() => setShowUpload(true)}><Upload className="w-5 h-5" /> Upload Resource</Button>
-      </div>
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-48">
-          <Search className="w-4 h-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resources..." className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none" />
-        </div>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none">
-          {categories.map((c) => <option key={c} value={c}>{c === "all" ? "All Categories" : c}</option>)}
-        </select>
-      </div>
-      {filtered.length === 0 ? (
-        <EmptyState icon={LibIcon} message="No resources found." />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((r) => (
-            <div key={r.id} className="bg-white rounded-xl border border-surface-200 p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-surface-900 line-clamp-1">{r.title}</h3>
-                <Badge color="primary">{r.file_type}</Badge>
-              </div>
-              <p className="text-sm text-surface-500 line-clamp-2 mb-3">{r.description || "No description"}</p>
-              {r.file_url && <a href={r.file_url} target="_blank" rel="noreferrer" className="text-sm text-primary-600 flex items-center gap-1 hover:underline"><Download className="w-4 h-4" /> Download</a>}
-            </div>
-          ))}
-        </div>
-      )}
-      {showUpload && <UploadResourceModal profileId={profile.id} onClose={() => setShowUpload(false)} onSaved={() => { setShowUpload(false); load(); }} />}
-    </div>
-  );
-}
-
-function UploadResourceModal({ profileId, onClose, onSaved }: { profileId: string; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ title: "", description: "", category: "", file_type: "other" as Resource["file_type"] });
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function save() {
-    if (!form.title.trim() || !file) return;
-    setBusy(true);
-    const ext = file.name.split(".").pop() ?? "";
-    const path = `resources/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
-    const { error: upErr } = await supabase.storage.from("library").upload(path, file);
-    if (upErr) { alert("Upload failed"); setBusy(false); return; }
-    const { data: urlData } = supabase.storage.from("library").getPublicUrl(path);
-    await supabase.from("resources").insert({ ...form, file_url: urlData.publicUrl, folder: form.category || "general", uploaded_by: profileId, download_count: 0 });
-    setBusy(false);
-    onSaved();
-  }
-  return (
-    <Modal title="Upload Resource" onClose={onClose}>
-      <div className="space-y-4">
-        <Field label="Title"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none" /></Field>
-        <Field label="Description"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none resize-none" /></Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Category"><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Beginners" className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none" /></Field>
-          <Field label="File Type"><select value={form.file_type} onChange={(e) => setForm({ ...form, file_type: e.target.value as Resource["file_type"] })} className="w-full px-4 py-2.5 rounded-lg border border-surface-200 focus:border-primary-500 outline-none"><option value="video">Video</option><option value="book">Book</option><option value="pgn">PGN</option><option value="worksheet">Worksheet</option><option value="tournament_file">Tournament File</option><option value="other">Other</option></select></Field>
-        </div>
-        <Field label="File"><input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-surface-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700" /></Field>
-        <Button onClick={save} disabled={busy || !form.title.trim() || !file} className="w-full">{busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />} Upload</Button>
       </div>
     </Modal>
   );
